@@ -1,14 +1,14 @@
 require 'pathname'
 
-Puppet::Type.newtype(:dsc_xsqlserveralwaysonservice) do
+Puppet::Type.newtype(:dsc_xsqlserverdatabaserecoverymodel) do
   require Pathname.new(__FILE__).dirname + '../../' + 'puppet/type/base_dsc'
   require Pathname.new(__FILE__).dirname + '../../puppet_x/puppetlabs/dsc_type_helpers'
 
 
   @doc = %q{
-    The DSC xSQLServerAlwaysOnService resource type.
+    The DSC xSQLServerDatabaseRecoveryModel resource type.
     Automatically generated from
-    'xSQLServer/DSCResources/MSFT_xSQLServerAlwaysOnService/MSFT_xSQLServerAlwaysOnService.schema.mof'
+    'xSQLServer/DSCResources/MSFT_xSQLServerDatabaseRecoveryModel/MSFT_xSQLServerDatabaseRecoveryModel.schema.mof'
 
     To learn more about PowerShell Desired State Configuration, please
     visit https://technet.microsoft.com/en-us/library/dn249912.aspx.
@@ -21,12 +21,13 @@ Puppet::Type.newtype(:dsc_xsqlserveralwaysonservice) do
   }
 
   validate do
+      fail('dsc_name is a required attribute') if self[:dsc_name].nil?
       fail('dsc_sqlserver is a required attribute') if self[:dsc_sqlserver].nil?
       fail('dsc_sqlinstancename is a required attribute') if self[:dsc_sqlinstancename].nil?
     end
 
-  def dscmeta_resource_friendly_name; 'xSQLServerAlwaysOnService' end
-  def dscmeta_resource_name; 'MSFT_xSQLServerAlwaysOnService' end
+  def dscmeta_resource_friendly_name; 'xSQLServerDatabaseRecoveryModel' end
+  def dscmeta_resource_name; 'MSFT_xSQLServerDatabaseRecoveryModel' end
   def dscmeta_module_name; 'xSQLServer' end
   def dscmeta_module_version; '5.0.0.0' end
 
@@ -36,7 +37,6 @@ Puppet::Type.newtype(:dsc_xsqlserveralwaysonservice) do
   ensurable do
     newvalue(:exists?) { provider.exists? }
     newvalue(:present) { provider.create }
-    newvalue(:absent)  { provider.destroy }
     defaultto { :present }
   end
 
@@ -56,21 +56,36 @@ Puppet::Type.newtype(:dsc_xsqlserveralwaysonservice) do
     end
   end
 
-  # Name:         Ensure
+  # Name:         Name
   # Type:         string
-  # IsMandatory:  False
-  # Values:       ["Present", "Absent"]
-  newparam(:dsc_ensure) do
+  # IsMandatory:  True
+  # Values:       None
+  newparam(:dsc_name) do
     def mof_type; 'string' end
     def mof_is_embedded?; false end
-    desc "Ensure - HADR is Present (enabled) or Absent (disabled) Valid values are Present, Absent."
+    desc "Name - The SQL database name"
+    isrequired
     validate do |value|
-      resource[:ensure] = value.downcase
       unless value.kind_of?(String)
         fail("Invalid value '#{value}'. Should be a string")
       end
-      unless ['Present', 'present', 'Absent', 'absent'].include?(value)
-        fail("Invalid value '#{value}'. Valid values are Present, Absent")
+    end
+  end
+
+  # Name:         RecoveryModel
+  # Type:         string
+  # IsMandatory:  False
+  # Values:       ["Full", "Simple", "BulkLogged"]
+  newparam(:dsc_recoverymodel) do
+    def mof_type; 'string' end
+    def mof_is_embedded?; false end
+    desc "RecoveryModel - The recovery model to use for the database. Valid values are Full, Simple, BulkLogged."
+    validate do |value|
+      unless value.kind_of?(String)
+        fail("Invalid value '#{value}'. Should be a string")
+      end
+      unless ['Full', 'full', 'Simple', 'simple', 'BulkLogged', 'bulklogged'].include?(value)
+        fail("Invalid value '#{value}'. Valid values are Full, Simple, BulkLogged")
       end
     end
   end
@@ -82,7 +97,7 @@ Puppet::Type.newtype(:dsc_xsqlserveralwaysonservice) do
   newparam(:dsc_sqlserver) do
     def mof_type; 'string' end
     def mof_is_embedded?; false end
-    desc "SQLServer - The hostname of the SQL Server to be configured"
+    desc "SQLServer - The host name of the SQL Server to be configured."
     isrequired
     validate do |value|
       unless value.kind_of?(String)
@@ -98,30 +113,12 @@ Puppet::Type.newtype(:dsc_xsqlserveralwaysonservice) do
   newparam(:dsc_sqlinstancename) do
     def mof_type; 'string' end
     def mof_is_embedded?; false end
-    desc "SQLInstanceName - Name of the SQL instance to be configured."
+    desc "SQLInstanceName - The name of the SQL instance to be configured."
     isrequired
     validate do |value|
       unless value.kind_of?(String)
         fail("Invalid value '#{value}'. Should be a string")
       end
-    end
-  end
-
-  # Name:         RestartTimeout
-  # Type:         sint32
-  # IsMandatory:  False
-  # Values:       None
-  newparam(:dsc_restarttimeout) do
-    def mof_type; 'sint32' end
-    def mof_is_embedded?; false end
-    desc "RestartTimeout - The length of time, in seconds, to wait for the service to restart. Default is 120 seconds."
-    validate do |value|
-      unless value.kind_of?(Numeric) || value.to_i.to_s == value
-          fail("Invalid value #{value}. Should be a signed Integer")
-      end
-    end
-    munge do |value|
-      PuppetX::Dsc::TypeHelpers.munge_integer(value)
     end
   end
 
@@ -132,7 +129,7 @@ Puppet::Type.newtype(:dsc_xsqlserveralwaysonservice) do
   end
 end
 
-Puppet::Type.type(:dsc_xsqlserveralwaysonservice).provide :powershell, :parent => Puppet::Type.type(:base_dsc).provider(:powershell) do
+Puppet::Type.type(:dsc_xsqlserverdatabaserecoverymodel).provide :powershell, :parent => Puppet::Type.type(:base_dsc).provider(:powershell) do
   confine :true => (Gem::Version.new(Facter.value(:powershell_version)) >= Gem::Version.new('5.0.10240.16384'))
   defaultfor :operatingsystem => :windows
 

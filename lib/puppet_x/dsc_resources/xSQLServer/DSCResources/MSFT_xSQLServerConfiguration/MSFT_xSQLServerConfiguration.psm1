@@ -35,9 +35,8 @@ function Get-TargetResource
         [String]
         $SQLServer,
 
-        [Parameter(Mandatory = $true)]
         [String]
-        $SQLInstanceName,
+        $SQLInstanceName = 'MSSQLSERVER',
 
         [Parameter(Mandatory = $true)]
         [String]
@@ -104,9 +103,8 @@ function Set-TargetResource
         [String]
         $SQLServer,
 
-        [Parameter(Mandatory = $true)]
         [String]
-        $SQLInstanceName,
+        $SQLInstanceName = 'MSSQLSERVER',
 
         [Parameter(Mandatory = $true)]
         [String]
@@ -184,9 +182,8 @@ function Test-TargetResource
         [String]
         $SQLServer,
 
-        [Parameter(Mandatory = $true)]
         [String]
-        $SQLInstanceName,
+        $SQLInstanceName = 'MSSQLSERVER',
 
         [Parameter(Mandatory = $true)]
         [String]

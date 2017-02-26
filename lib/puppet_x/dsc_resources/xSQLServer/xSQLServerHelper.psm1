@@ -830,6 +830,78 @@ function Get-SQLAlwaysOnEndpoint
 
 <#
     .SYNOPSIS
+        Create a new database in the SQL Server instance provided.
+
+    .PARAMETER SQL
+        An object returned from Connect-SQL function in which the database will be created.
+
+    .PARAMETER Name
+        String containing the database name to be created.
+#>
+function New-SqlDatabase
+{
+    [CmdletBinding()]
+    param
+    (
+        [ValidateNotNull()]
+        [System.Object]
+        $SQL,
+
+        [ValidateNotNull()]
+        [System.String]
+        $Name
+    )
+
+    $newDatabase = New-Object -TypeName Microsoft.SqlServer.Management.Smo.Database -ArgumentList $SQL,$Name
+    if ($newDatabase)
+    {
+        New-VerboseMessage -Message "Adding to SQL the database $Name"
+        $newDatabase.Create()
+    }
+    else
+    {
+        New-VerboseMessage -Message "Failed to adding the database $Name"
+    }
+}
+
+<#
+    .SYNOPSIS
+        Remove a database in the SQL Server instance provided.
+
+    .PARAMETER SQL
+        An object returned from Connect-SQL function in which a database will be removed.
+
+    .PARAMETER Name
+        String containing the database name to be removed.
+#>
+function Remove-SqlDatabase
+{
+    [CmdletBinding()]
+    param
+    (
+        [ValidateNotNull()]
+        [System.Object]
+        $Sql,
+
+        [ValidateNotNull()]
+        [System.String]
+        $Name
+    )
+
+    $getDatabase = $Sql.Databases[$Name]
+    if ($getDatabase)
+    {
+        New-VerboseMessage -Message "Deleting to SQL the database $Name"
+        $getDatabase.Drop()
+    }
+    else
+    {
+        New-VerboseMessage -Message "Failed to deleting the database $Name"
+    }
+}
+
+<#
+    .SYNOPSIS
         Add a user to a server role in the SQL Server instance provided.
 
     .PARAMETER Sql
@@ -978,14 +1050,14 @@ function Confirm-SqlServerRoleMember
             if ($sqlRole[$currentServerRole])
             {
                 $membersInRole = $sqlRole[$currentServerRole].EnumMemberNames()
-                if ($membersInRole.Contains($LoginName))
+                if ($membersInRole.Contains($Name))
                 {
                     $confirmServerRole = $true
-                    New-VerboseMessage -Message "$LoginName is present in SQL role name $currentServerRole"
+                    New-VerboseMessage -Message "$Name is present in SQL role name $currentServerRole"
                 }
                 else
                 {
-                    New-VerboseMessage -Message "$LoginName is absent in SQL role name $currentServerRole"
+                    New-VerboseMessage -Message "$Name is absent in SQL role name $currentServerRole"
                     $confirmServerRole = $false
                 }
             }
@@ -1662,84 +1734,4 @@ function Remove-SqlDatabasePermission
                                    -FormatArgs @($Database,$sqlServer,$sqlInstanceName) `
                                    -ErrorCategory InvalidResult
     }
-}
-
-<#
-    .SYNOPSIS
-    Executes a query on the specified database.
-
-    .PARAMETER SQLServer
-    The hostname of the server that hosts the SQL instance.
-    
-    .PARAMETER SQLInstanceName
-    The name of the SQL instance that hosts the database.
-
-    .PARAMETER Database
-    Specify the name of the database to execute the query on.
-
-    .PARAMETER Query
-    The query string to execute.
-
-    .PARAMETER WithResults
-    Specifies if the query should return results.
-
-    .EXAMPLE
-    Invoke-Query -SQLServer Server1 -SQLInstanceName MSSQLSERVER -Database master -Query 'SELECT name FROM sys.databases' -WithResults
-
-    .EXAMPLE
-    Invoke-Query -SQLServer Server1 -SQLInstanceName MSSQLSERVER -Database master -Query 'RESTORE DATABASE [NorthWinds] WITH RECOVERY'
-#>
-function Invoke-Query
-{
-    [CmdletBinding()]
-    param
-    (
-        [Parameter(Mandatory = $true)]
-        [ValidateNotNullOrEmpty()]
-        [String]
-        $SQLServer,
-
-        [Parameter(Mandatory = $true)]
-        [String]
-        $SQLInstanceName,
-
-        [Parameter(Mandatory = $true)]
-        [String]
-        $Database,
-
-        [Parameter(Mandatory = $true)]
-        [String]
-        $Query,
-
-        [Parameter()]
-        [Switch]
-        $WithResults
-    )
-
-    $serverObject = Connect-SQL -SQLServer $SQLServer -SQLInstanceName $SQLInstanceName
-
-    if ( $WithResults )
-    {
-        try
-        {
-            $result = $serverObject.Databases[$Database].ExecuteWithResults($Query)
-        }
-        catch
-        {
-            throw New-TerminatingError -ErrorType ExecuteQueryWithResultsFailed -FormatArgs $Database -ErrorCategory NotSpecified
-        }
-    }
-    else
-    {
-        try
-        {
-            $serverObject.Databases[$Database].ExecuteNonQuery($Query)
-        }
-        catch
-        {
-            throw New-TerminatingError -ErrorType ExecuteNonQueryFailed -FormatArgs $Database -ErrorCategory NotSpecified
-        }
-    }
-
-    return $result
 }

@@ -1,14 +1,14 @@
 require 'pathname'
 
-Puppet::Type.newtype(:dsc_xsqlserveralwaysonservice) do
+Puppet::Type.newtype(:dsc_xsqlserverdatabasepermission) do
   require Pathname.new(__FILE__).dirname + '../../' + 'puppet/type/base_dsc'
   require Pathname.new(__FILE__).dirname + '../../puppet_x/puppetlabs/dsc_type_helpers'
 
 
   @doc = %q{
-    The DSC xSQLServerAlwaysOnService resource type.
+    The DSC xSQLServerDatabasePermission resource type.
     Automatically generated from
-    'xSQLServer/DSCResources/MSFT_xSQLServerAlwaysOnService/MSFT_xSQLServerAlwaysOnService.schema.mof'
+    'xSQLServer/DSCResources/MSFT_xSQLServerDatabasePermission/MSFT_xSQLServerDatabasePermission.schema.mof'
 
     To learn more about PowerShell Desired State Configuration, please
     visit https://technet.microsoft.com/en-us/library/dn249912.aspx.
@@ -21,12 +21,15 @@ Puppet::Type.newtype(:dsc_xsqlserveralwaysonservice) do
   }
 
   validate do
+      fail('dsc_database is a required attribute') if self[:dsc_database].nil?
+      fail('dsc_name is a required attribute') if self[:dsc_name].nil?
+      fail('dsc_permissionstate is a required attribute') if self[:dsc_permissionstate].nil?
       fail('dsc_sqlserver is a required attribute') if self[:dsc_sqlserver].nil?
       fail('dsc_sqlinstancename is a required attribute') if self[:dsc_sqlinstancename].nil?
     end
 
-  def dscmeta_resource_friendly_name; 'xSQLServerAlwaysOnService' end
-  def dscmeta_resource_name; 'MSFT_xSQLServerAlwaysOnService' end
+  def dscmeta_resource_friendly_name; 'xSQLServerDatabasePermission' end
+  def dscmeta_resource_name; 'MSFT_xSQLServerDatabasePermission' end
   def dscmeta_module_name; 'xSQLServer' end
   def dscmeta_module_version; '5.0.0.0' end
 
@@ -63,7 +66,7 @@ Puppet::Type.newtype(:dsc_xsqlserveralwaysonservice) do
   newparam(:dsc_ensure) do
     def mof_type; 'string' end
     def mof_is_embedded?; false end
-    desc "Ensure - HADR is Present (enabled) or Absent (disabled) Valid values are Present, Absent."
+    desc "Ensure - If the values should be present or absent. Valid values are 'Present' or 'Absent'. Valid values are Present, Absent."
     validate do |value|
       resource[:ensure] = value.downcase
       unless value.kind_of?(String)
@@ -75,6 +78,75 @@ Puppet::Type.newtype(:dsc_xsqlserveralwaysonservice) do
     end
   end
 
+  # Name:         Database
+  # Type:         string
+  # IsMandatory:  True
+  # Values:       None
+  newparam(:dsc_database) do
+    def mof_type; 'string' end
+    def mof_is_embedded?; false end
+    desc "Database - The name of the database."
+    isrequired
+    validate do |value|
+      unless value.kind_of?(String)
+        fail("Invalid value '#{value}'. Should be a string")
+      end
+    end
+  end
+
+  # Name:         Name
+  # Type:         string
+  # IsMandatory:  True
+  # Values:       None
+  newparam(:dsc_name) do
+    def mof_type; 'string' end
+    def mof_is_embedded?; false end
+    desc "Name - The name of the user that should be granted or denied the permission."
+    isrequired
+    validate do |value|
+      unless value.kind_of?(String)
+        fail("Invalid value '#{value}'. Should be a string")
+      end
+    end
+  end
+
+  # Name:         PermissionState
+  # Type:         string
+  # IsMandatory:  True
+  # Values:       ["Grant", "Deny"]
+  newparam(:dsc_permissionstate) do
+    def mof_type; 'string' end
+    def mof_is_embedded?; false end
+    desc "PermissionState - The state of the permission. Valid values are 'Grant' or 'Deny'. Valid values are Grant, Deny."
+    isrequired
+    validate do |value|
+      unless value.kind_of?(String)
+        fail("Invalid value '#{value}'. Should be a string")
+      end
+      unless ['Grant', 'grant', 'Deny', 'deny'].include?(value)
+        fail("Invalid value '#{value}'. Valid values are Grant, Deny")
+      end
+    end
+  end
+
+  # Name:         Permissions
+  # Type:         string[]
+  # IsMandatory:  False
+  # Values:       None
+  newparam(:dsc_permissions, :array_matching => :all) do
+    def mof_type; 'string[]' end
+    def mof_is_embedded?; false end
+    desc "Permissions - The set of permissions for the SQL database."
+    validate do |value|
+      unless value.kind_of?(Array) || value.kind_of?(String)
+        fail("Invalid value '#{value}'. Should be a string or an array of strings")
+      end
+    end
+    munge do |value|
+      Array(value)
+    end
+  end
+
   # Name:         SQLServer
   # Type:         string
   # IsMandatory:  True
@@ -82,7 +154,7 @@ Puppet::Type.newtype(:dsc_xsqlserveralwaysonservice) do
   newparam(:dsc_sqlserver) do
     def mof_type; 'string' end
     def mof_is_embedded?; false end
-    desc "SQLServer - The hostname of the SQL Server to be configured"
+    desc "SQLServer - The host name of the SQL Server to be configured."
     isrequired
     validate do |value|
       unless value.kind_of?(String)
@@ -98,30 +170,12 @@ Puppet::Type.newtype(:dsc_xsqlserveralwaysonservice) do
   newparam(:dsc_sqlinstancename) do
     def mof_type; 'string' end
     def mof_is_embedded?; false end
-    desc "SQLInstanceName - Name of the SQL instance to be configured."
+    desc "SQLInstanceName - The name of the SQL instance to be configured."
     isrequired
     validate do |value|
       unless value.kind_of?(String)
         fail("Invalid value '#{value}'. Should be a string")
       end
-    end
-  end
-
-  # Name:         RestartTimeout
-  # Type:         sint32
-  # IsMandatory:  False
-  # Values:       None
-  newparam(:dsc_restarttimeout) do
-    def mof_type; 'sint32' end
-    def mof_is_embedded?; false end
-    desc "RestartTimeout - The length of time, in seconds, to wait for the service to restart. Default is 120 seconds."
-    validate do |value|
-      unless value.kind_of?(Numeric) || value.to_i.to_s == value
-          fail("Invalid value #{value}. Should be a signed Integer")
-      end
-    end
-    munge do |value|
-      PuppetX::Dsc::TypeHelpers.munge_integer(value)
     end
   end
 
@@ -132,7 +186,7 @@ Puppet::Type.newtype(:dsc_xsqlserveralwaysonservice) do
   end
 end
 
-Puppet::Type.type(:dsc_xsqlserveralwaysonservice).provide :powershell, :parent => Puppet::Type.type(:base_dsc).provider(:powershell) do
+Puppet::Type.type(:dsc_xsqlserverdatabasepermission).provide :powershell, :parent => Puppet::Type.type(:base_dsc).provider(:powershell) do
   confine :true => (Gem::Version.new(Facter.value(:powershell_version)) >= Gem::Version.new('5.0.10240.16384'))
   defaultfor :operatingsystem => :windows
 

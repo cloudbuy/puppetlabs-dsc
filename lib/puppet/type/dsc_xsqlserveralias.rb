@@ -1,14 +1,14 @@
 require 'pathname'
 
-Puppet::Type.newtype(:dsc_xsqlserverendpointpermission) do
+Puppet::Type.newtype(:dsc_xsqlserveralias) do
   require Pathname.new(__FILE__).dirname + '../../' + 'puppet/type/base_dsc'
   require Pathname.new(__FILE__).dirname + '../../puppet_x/puppetlabs/dsc_type_helpers'
 
 
   @doc = %q{
-    The DSC xSQLServerEndpointPermission resource type.
+    The DSC xSQLServerAlias resource type.
     Automatically generated from
-    'xSQLServer/DSCResources/MSFT_xSQLServerEndpointPermission/MSFT_xSQLServerEndpointPermission.schema.mof'
+    'xSQLServer/DSCResources/MSFT_xSQLServerAlias/MSFT_xSQLServerAlias.schema.mof'
 
     To learn more about PowerShell Desired State Configuration, please
     visit https://technet.microsoft.com/en-us/library/dn249912.aspx.
@@ -21,12 +21,12 @@ Puppet::Type.newtype(:dsc_xsqlserverendpointpermission) do
   }
 
   validate do
-      fail('dsc_instancename is a required attribute') if self[:dsc_instancename].nil?
-      fail('dsc_principal is a required attribute') if self[:dsc_principal].nil?
+      fail('dsc_name is a required attribute') if self[:dsc_name].nil?
+      fail('dsc_servername is a required attribute') if self[:dsc_servername].nil?
     end
 
-  def dscmeta_resource_friendly_name; 'xSQLServerEndpointPermission' end
-  def dscmeta_resource_name; 'MSFT_xSQLServerEndpointPermission' end
+  def dscmeta_resource_friendly_name; 'xSQLServerAlias' end
+  def dscmeta_resource_name; 'MSFT_xSQLServerAlias' end
   def dscmeta_module_name; 'xSQLServer' end
   def dscmeta_module_version; '5.0.0.0' end
 
@@ -56,14 +56,14 @@ Puppet::Type.newtype(:dsc_xsqlserverendpointpermission) do
     end
   end
 
-  # Name:         InstanceName
+  # Name:         Name
   # Type:         string
   # IsMandatory:  True
   # Values:       None
-  newparam(:dsc_instancename) do
+  newparam(:dsc_name) do
     def mof_type; 'string' end
     def mof_is_embedded?; false end
-    desc "InstanceName - The SQL Server instance name."
+    desc "Name - The name of Alias (e.g. svr01\\inst01)."
     isrequired
     validate do |value|
       unless value.kind_of?(String)
@@ -72,14 +72,82 @@ Puppet::Type.newtype(:dsc_xsqlserverendpointpermission) do
     end
   end
 
-  # Name:         NodeName
+  # Name:         Protocol
+  # Type:         string
+  # IsMandatory:  False
+  # Values:       ["TCP", "NP"]
+  newparam(:dsc_protocol) do
+    def mof_type; 'string' end
+    def mof_is_embedded?; false end
+    desc "Protocol - Protocol to use when connecting. Valid values are 'TCP' or 'NP' (Named Pipes). Default value is 'TCP'. Valid values are TCP, NP."
+    validate do |value|
+      unless value.kind_of?(String)
+        fail("Invalid value '#{value}'. Should be a string")
+      end
+      unless ['TCP', 'tcp', 'NP', 'np'].include?(value)
+        fail("Invalid value '#{value}'. Valid values are TCP, NP")
+      end
+    end
+  end
+
+  # Name:         ServerName
+  # Type:         string
+  # IsMandatory:  True
+  # Values:       None
+  newparam(:dsc_servername) do
+    def mof_type; 'string' end
+    def mof_is_embedded?; false end
+    desc "ServerName - The SQL Server you are aliasing (the netbios name or FQDN)."
+    isrequired
+    validate do |value|
+      unless value.kind_of?(String)
+        fail("Invalid value '#{value}'. Should be a string")
+      end
+    end
+  end
+
+  # Name:         TcpPort
+  # Type:         uint16
+  # IsMandatory:  False
+  # Values:       None
+  newparam(:dsc_tcpport) do
+    def mof_type; 'uint16' end
+    def mof_is_embedded?; false end
+    desc "TcpPort - The TCP port SQL is listening on. Only used when protocol is set to 'TCP'. Default value is port 1433."
+    validate do |value|
+      unless (value.kind_of?(Numeric) && value >= 0) || (value.to_i.to_s == value && value.to_i >= 0)
+          fail("Invalid value #{value}. Should be a unsigned Integer")
+      end
+    end
+    munge do |value|
+      PuppetX::Dsc::TypeHelpers.munge_integer(value)
+    end
+  end
+
+  # Name:         UseDynamicTcpPort
+  # Type:         boolean
+  # IsMandatory:  False
+  # Values:       None
+  newparam(:dsc_usedynamictcpport) do
+    def mof_type; 'boolean' end
+    def mof_is_embedded?; false end
+    desc "UseDynamicTcpPort - The UseDynamicTcpPort specify that the Net-Library will determine the port dynamically. The port specified in Port number will not be used. Default value is '$false'."
+    validate do |value|
+    end
+    newvalues(true, false)
+    munge do |value|
+      PuppetX::Dsc::TypeHelpers.munge_boolean(value.to_s)
+    end
+  end
+
+  # Name:         PipeName
   # Type:         string
   # IsMandatory:  False
   # Values:       None
-  newparam(:dsc_nodename) do
+  newparam(:dsc_pipename) do
     def mof_type; 'string' end
     def mof_is_embedded?; false end
-    desc "NodeName - The host name or FQDN."
+    desc "PipeName - Named Pipes path from the Get-TargetResource method."
     validate do |value|
       unless value.kind_of?(String)
         fail("Invalid value '#{value}'. Should be a string")
@@ -94,7 +162,7 @@ Puppet::Type.newtype(:dsc_xsqlserverendpointpermission) do
   newparam(:dsc_ensure) do
     def mof_type; 'string' end
     def mof_is_embedded?; false end
-    desc "Ensure - If the permission should be present or absent. Valid values are Present, Absent."
+    desc "Ensure - Determines whether the alias should be added or removed. Default value is 'Present' Valid values are Present, Absent."
     validate do |value|
       resource[:ensure] = value.downcase
       unless value.kind_of?(String)
@@ -106,55 +174,6 @@ Puppet::Type.newtype(:dsc_xsqlserverendpointpermission) do
     end
   end
 
-  # Name:         Name
-  # Type:         string
-  # IsMandatory:  False
-  # Values:       None
-  newparam(:dsc_name) do
-    def mof_type; 'string' end
-    def mof_is_embedded?; false end
-    desc "Name - The name of the endpoint."
-    validate do |value|
-      unless value.kind_of?(String)
-        fail("Invalid value '#{value}'. Should be a string")
-      end
-    end
-  end
-
-  # Name:         Principal
-  # Type:         string
-  # IsMandatory:  True
-  # Values:       None
-  newparam(:dsc_principal) do
-    def mof_type; 'string' end
-    def mof_is_embedded?; false end
-    desc "Principal - The login to which permission will be set."
-    isrequired
-    validate do |value|
-      unless value.kind_of?(String)
-        fail("Invalid value '#{value}'. Should be a string")
-      end
-    end
-  end
-
-  # Name:         Permission
-  # Type:         string
-  # IsMandatory:  False
-  # Values:       ["CONNECT"]
-  newparam(:dsc_permission) do
-    def mof_type; 'string' end
-    def mof_is_embedded?; false end
-    desc "Permission - The permission to set for the login. Valid values are CONNECT."
-    validate do |value|
-      unless value.kind_of?(String)
-        fail("Invalid value '#{value}'. Should be a string")
-      end
-      unless ['CONNECT', 'connect'].include?(value)
-        fail("Invalid value '#{value}'. Valid values are CONNECT")
-      end
-    end
-  end
-
 
   def builddepends
     pending_relations = super()
@@ -162,7 +181,7 @@ Puppet::Type.newtype(:dsc_xsqlserverendpointpermission) do
   end
 end
 
-Puppet::Type.type(:dsc_xsqlserverendpointpermission).provide :powershell, :parent => Puppet::Type.type(:base_dsc).provider(:powershell) do
+Puppet::Type.type(:dsc_xsqlserveralias).provide :powershell, :parent => Puppet::Type.type(:base_dsc).provider(:powershell) do
   confine :true => (Gem::Version.new(Facter.value(:powershell_version)) >= Gem::Version.new('5.0.10240.16384'))
   defaultfor :operatingsystem => :windows
 

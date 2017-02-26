@@ -36,7 +36,7 @@ xSCVMM: 1.2.4.0-PSGallery
 xSharePoint: 1.4.0.0-PSGallery
 xSmbShare: 2.0.0.0-PSGallery
 xSqlPs: 1.4.0.0-PSGallery
-xSQLServer: 3.0.0.0-PSGallery
+xSQLServer: 5.0.0.0-PSGallery
 xStorage: 2.8.0.0-PSGallery
 xTimeZone: 1.6.0.0-PSGallery
 xWebAdministration: 1.15.0.0-PSGallery
